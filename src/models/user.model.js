@@ -49,9 +49,9 @@ const userSchema=new Schema(
     {timestamps:true}
 )
 
-userSchema.pre("save", async function(next){
+userSchema.pre("save", async function(next){   //.pre("save") is a Mongoose middleware. It's a function that gets executed before a document is saved to the database.
     if(!this.isModified("password")) return next()
-    this.password=bcrypt.hash(this.password,10)
+    this.password=await bcrypt.hash(this.password,10)
     next()
 })
 
