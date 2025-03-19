@@ -86,4 +86,118 @@ const registerUser=asyncHandler(async(req,res)=>{
     )
 })
 
-export {registerUser}
+
+
+
+
+const generateAccessAndRefreshTokens=async(userId)=>{ //dont used asynchandler because its just a internal method  and not handling any web request
+    try {
+        const user=await User.findById(userId)  //user and User are different ,where User can only access database in mongodb and user can access all the methods there
+        const accessToken=user.generateAccessToken()  //we give it to user
+        const refreshToken=user.generateRefreshToken() //we give it to user and also save it in database so we dont need to ask for password everytime
+
+        user.refreshToken=refreshToken
+        await user.save({validateBeforeSave:false}) //to save refreshToken to database and validateBeforeSave:false because other mongoose field like password kick in
+
+        return {accessToken,refreshToken}
+
+    } catch (error) {
+        throw new apiError(500,"Something went wrong while generating access and refresh token")
+    }
+}
+
+const loginUser=asyncHandler(async(req,res)=>{
+    // req body -> data
+    // username or email required
+    // find the user 
+    // check password 
+    // access or refresh token 
+    // send cookie 
+
+    // req body -> data
+    const {email,username,password}=req.body
+
+    // username or email required
+    if (!email || !username) {
+        throw new apiError(400,"username or password is required")
+    }
+
+    // find the user 
+    // const user=User.findOne({username})
+    const user=User.findOne({   // now the refreshToken is empty and we have select all unwanted fields like password
+        $or:[{email},{username}]
+    })
+
+    if (!user) {
+        throw new apiError(404,"user does not exist")
+    }
+
+    // check password 
+    const isPasswordValid=await user.isPasswordCorrect(password)
+
+    if (!isPasswordValid) {
+        throw new apiError(401,"password incorrect")
+    }
+    
+    // access or refresh token 
+    const{accessToken,refreshToken}= await generateAccessAndRefreshTokens(user._id)
+
+    const loggedInUser=await User.findById(user._id).select("-password -refreshToken") // now the refresh token in user is not empty and we also de-select fields like password 
+
+    // send cookie
+    const options={
+        httpOnly:true,
+        secure:true
+    }
+
+    return res.status(200)
+    .cookie("accessToken",accessToken,options) //we get res.cookie automatically by express
+    .cookie("refreshToken",refreshToken,options)
+    .json(
+        new apiResponse(
+            200,
+            {
+                user:loggedInUser,accessToken,refreshToken
+            },
+            "User Logged In Successfully"
+        )
+    )
+
+})
+
+
+
+
+const logoutUser=asyncHandler(async(req,res)=>{
+    //req.user._id  // you have access of req.user because in user.route.js you have used the middleware verifyJWT which has req.user
+
+    await User.findByIdAndUpdate(   //to delete refreshToken from database because we logout
+        req.user._id,
+        {
+            $set:{
+                refreshToken:undefined
+            }
+        },
+        {
+            new:true  //return a new updated response where refreshToken:undefined
+        }
+    )
+
+
+    const options={
+        httpOnly:true,
+        secure:true
+    }
+
+    return res.status(200)
+    .clearCookie("accessToken",options)  //to remove token from cookie 
+    .clearCookie("refreshToken",options)
+    .json(new apiResponse(200,{},"User logged Out"))
+    
+})
+
+export {
+    registerUser,
+    loginUser,
+    logoutUser
+}
