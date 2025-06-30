@@ -98,7 +98,7 @@ const generateAccessAndRefreshTokens=async(userId)=>{ //dont used asynchandler b
         const refreshToken=user.generateRefreshToken() //we give it to user and also save it in database so we dont need to ask for password everytime
 
         user.refreshToken=refreshToken
-        await user.save({validateBeforeSave:false}) //to save refreshToken to database and validateBeforeSave:false because other mongoose field like password kick in
+        await user.save({validateBeforeSave:false}) //to save refreshToken to database and validateBeforeSave:false because other mongoose field like password kick in where there is {required: true}
 
         return {accessToken,refreshToken}
 
@@ -158,7 +158,7 @@ const loginUser=asyncHandler(async(req,res)=>{
         new apiResponse(
             200,
             {
-                user:loggedInUser,accessToken,refreshToken
+                user:loggedInUser,accessToken,refreshToken  //user: loggedInUser creates a property  "user" whose value is  loggedInUser. This means in returned object,  key will be "user" instead of "loggedInUser". so total keys: "user", "accessToken", and "refreshToken"
             },
             "User Logged In Successfully"
         )
@@ -210,7 +210,8 @@ const refreshAccessToken=asyncHandler(async(req,res)=>{ //to refresh our access 
     }
 
     try {
-        const decodedToken=jwt.verify(incomingRefreshToken,process.env.REFRESH_TOKEN_SECRET)
+        const decodedToken=jwt.verify(incomingRefreshToken,process.env.REFRESH_TOKEN_SECRET) //Verifies that: The token is well-formed, The signature is valid (i.e., it hasn't been tampered with) , The token is not expired
+        // but jwt.verify Does not check if it was actually issued by your backend or if it's still valid in your system.
     
         const user =await User.findById(decodedToken?._id)  //decode the token to find the user related to it 
     
