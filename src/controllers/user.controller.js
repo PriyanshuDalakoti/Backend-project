@@ -179,8 +179,11 @@ const logoutUser=asyncHandler(async(req,res)=>{
     await User.findByIdAndUpdate(   //to delete refreshToken from database because we logout
         req.user._id,
         {
-            $set:{
-                refreshToken:undefined
+            // $set:{
+            //     refreshToken:undefined //this removes the field from document  (OR)
+            // }
+            $unset:{
+                refreshToken:1 //this removes the field from document
             }
         },
         {
@@ -404,10 +407,10 @@ const getUserChannelProfile=asyncHandler(async(req,res)=>{
         {
             $addFields: {
                 subscribersCount:{
-                    size: "$subscribers"
+                    $size: "$subscribers"
                 },
                 channelSubscribedToCount:{
-                    size:"$subscribedTo"
+                    $size:"$subscribedTo",
                 },
                 isSubscribed:{
                     $cond:{
