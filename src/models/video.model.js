@@ -40,5 +40,5 @@ const videoSchema=new Schema({
     }
 },{timestamps:true})
 
-videoSchema.plugin(mongooseAggregatePaginate)
+videoSchema.plugin(mongooseAggregatePaginate)  //plugin provide the ability to control paginate to decide how many videos need to given to user
 export const Video=mongoose.model("Video",videoSchema)  
